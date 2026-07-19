@@ -1,8 +1,8 @@
 <script>
-
+    import ChartOne from '$lib/components/chart1.svelte'
 </script>
 
-<h1>Class Svelte Starter</h1>
+<ChartOne />
 
 <style>
 </style>
