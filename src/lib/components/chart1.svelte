@@ -281,7 +281,7 @@
 				style="background-color: {hexToRgba('#8f3f97', opacity)}; color: {opacity < 0.7
 					? '#000'
 					: '#fff'}; fill-opacity: {opacity};">"Very Unhealthy"</span
-			>.
+			>. Hover over the chart below to see how the AQI changed in each of the cities in this 24-hour span.
 		</p>
 	</div>
 	<div class="legend-container">
