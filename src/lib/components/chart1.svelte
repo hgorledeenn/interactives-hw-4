@@ -164,7 +164,7 @@
 	// setting svg specs
 	const height = 600;
 	const margin = {
-		top: 30,
+		top: 10,
 		right: 30,
 		bottom: 40,
 		left: 70
@@ -201,9 +201,9 @@
 	const cityColors = {
 		Detroit: '#2ECC71',
 		Chicago: '#33A8FF',
-		Pittsburgh: '#F1C40F',
-		'Washington DC': '#9B59B6',
-		'New York City': '#FF5733'
+		Pittsburgh: '#FF5733',
+		'Washington DC': '#F1C40F',
+		'New York City': '#9B59B6'
 	};
 
 	// and creating colorScale to apply those colors to each city
@@ -226,42 +226,82 @@
 	];
 
 	// for tooltips
-	let mouseX = $state(0);
-	let mouseY = $state(0);
-	let tooltipX = $derived(xScale.invert(mouseX));
-	const times = data[0].aqi.map(d => parseTime(d.time));
-	const bisect = d3.bisector(d => d).center;
-	let hourIndex = $derived(
-    	bisect(times, tooltipX)
+	let mouseX = $state(null);
+	let mouseY = $state(null);
+	let mouseXData = $derived(xScale.invert(mouseX));
+	const times = data[0].aqi.map((d) => parseTime(d.time));
+	const bisect = d3.bisector((d) => d).center;
+	let hourIndex = $derived(bisect(times, mouseXData));
+	let displayHourIndex = $derived(
+		mouseX === null ? data[0].aqi.length - 1 : bisect(times, xScale.invert(mouseX))
+	);
+	let tooltipX = $derived(xScale(parseTime(data[0].aqi[hourIndex].time)));
+	let tooltipY = $derived(mouseY - 50);
+
+	let currentAQI = $derived(
+		data.map((city) => ({
+			city: city.city,
+			color: colorScale(city.city),
+			value: city.aqi[displayHourIndex].value,
+			hour: city.aqi[displayHourIndex].time
+		}))
 	);
 
+	let selectedCityClass = $state(null);
+
+	// for testing tooltips
+	const city = $derived(data.find((item) => item.city === selected));
 </script>
 
 <div bind:clientWidth={containerWidth}>
-	<div class="controls">
-		{#each Object.entries(cityColors) as [city, color]}
-			<button
-				class="city-button"
-				style="background-color: {color}"
-				onclick={() => (selected = city)}
-			>
-				{city}
-			</button>
-		{/each}
+	<div
+		 class="story-head"
+		 style="width: {width - margin.left - margin.right}px; margin-left: {margin.left}px;"
+	>
+		<h1>Smoke from Canadian Wildfires Fills US Skies</h1>
+		<p>The Air Quality Index in 5 US Cities ranged drastically on July 17, as smoke from hundreds of active wildfires in Canada was funneled over the Midwest and Northeast. Both Chicago and Detroit had sustained AQI values above 300, considered "Hazardous", while Pittsburgh and Washington D.C. peaked in the next-highest range, considered "Very Unhealthy".</p>
+	</div>
+	<div class="legend-container">
+		<div class="city-section">
+			<div class="legend-header">
+				<h3>AQI at {currentAQI[0].hour}</h3>
+				<p>Click a city to highlight its line</p>
+			</div>
 
-		<!-- None button -->
-		<label>
-			<input type="range" bind:value={opacity} min="0" max="1" step="0.05" />
-		</label>
-		<button
-			onclick={() => {
-				selected = 'None';
-				opacity = '0.2';
-			}}
-		>
-			Reset
-		</button>
-		<p>{data[0].aqi[hourIndex].time}</p>
+			<div class="aqi-summary">
+				{#each currentAQI as city}
+					<div
+						class="city-summary"
+						onclick={() => (selected = city.city)}
+						class:highlight-box={selected === city.city}
+					>
+						<div class="dot" style="background-color:{city.color}"></div>
+
+						<div>
+							<strong>{city.city}</strong>
+							<div>AQI: {city.value}</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<div class="controls">
+			<label>
+				<p class="helper-text"><i>Background opacity:</i></p>
+				<input type="range" bind:value={opacity} min="0" max="1" step="0.05" />
+			</label>
+
+			<button
+				class="reset-button"
+				onclick={() => {
+					selected = 'None';
+					opacity = 0.2;
+				}}
+			>
+				Reset
+			</button>
+		</div>
 	</div>
 
 	{#if containerWidth > 0}
@@ -318,42 +358,184 @@
 					d={lineGenerator(cityData.aqi)}
 					fill="none"
 					stroke={colorScale(cityData.city)}
-					stroke-width={selected === 'None' || selected === cityData.city ? '3' : '2'}
+					stroke-width={selected === 'None' || selected === cityData.city ? '4' : '3'}
 					opacity={selected === 'None' || selected === cityData.city ? '1' : '0.3'}
 				/>
 			{/each}
 
-			<rect
-			    x={margin.left}
-    			y={margin.top}
-    			width={width - margin.left - margin.right}
-    			height={height - margin.top - margin.bottom}
-    			fill="transparent"
-    			onmousemove={(event) => {
-        			const [x, y] = d3.pointer(event);
-        			mouseX = x;
-        			mouseY = y;
-    			}}
-			/>
+			<!-- tooltip -->
+			{#if mouseX > 0}
+				<g>
+					<line
+						x1={xScale(parseTime(data[0].aqi[hourIndex].time))}
+						x2={xScale(parseTime(data[0].aqi[hourIndex].time))}
+						y1={margin.top}
+						y2={height - margin.bottom}
+						stroke="gray"
+						stroke-width="0.5"
+					/>
 
-			{#if mouseX>0}
-				<line
-					x1={xScale(parseTime((data[0].aqi[hourIndex].time)))}
-					x2={xScale(parseTime((data[0].aqi[hourIndex].time)))}
-					y1={margin.top}
-					y2={height - margin.bottom}
-					stroke="gray"
-					stroke-width="0.5"
-				/>
+					{#each data as city}
+						<circle
+							cx={xScale(parseTime(data[0].aqi[hourIndex].time))}
+							cy={yScale(city.aqi[hourIndex].value)}
+							r="6"
+							fill={colorScale(city.city)}
+							opacity={selected === 'None' || selected === city.city ? '1' : '0.3'}
+						/>
+					{/each}
+
+					<!-- my first tooltip attempt that shows the data where the mouse is-->
+
+					<!-- <rect x={tooltipX} y={tooltipY} width="100" height="100" fill="#cacaca" opacity="0.8" />
+
+					<foreignObject
+						x={tooltipX + 10}
+						y={tooltipY}
+						width="220"
+						height="180"
+					>
+						<table>
+							<thead>
+								<tr>
+									<th>City</th>
+									<th>AQI</th>
+								</tr>
+							</thead>
+
+							<tbody>
+								{#each data as city}
+									<tr>
+										<td>{city.city}</td>
+										<td>{city.aqi[hourIndex].value}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</foreignObject> -->
+				</g>
 			{/if}
+
+			<rect
+				x={margin.left}
+				y={margin.top}
+				width={width - margin.left - margin.right}
+				height={height - margin.top - margin.bottom}
+				fill="transparent"
+				onmousemove={(event) => {
+					const [x, y] = d3.pointer(event);
+					mouseX = x;
+					mouseY = y;
+				}}
+				onmouseleave={() => {
+					mouseX = null;
+					mouseY = null;
+				}}
+			/>
 		</svg>
 	{/if}
 </div>
 
 <style>
-	.city-button {
-		padding: 4px 10px;
-		font-size: 16px;
+
+	.story-head {
+		margin-top: 40px;
+		margin-bottom: 20px;
+	}
+
+	.story-head h1 {
+		font-size: 50px;
 		font-family: sans-serif;
+		margin-bottom: 0px;
+	}
+
+	.story-head p {
+		margin-top: 10px;
+		margin-bottom: 0px;
+		font-size: 25px;
+		font-family: sans-serif;
+	}
+
+	.highlight-box {
+		border: 2px solid #333333; 
+		border-radius: 12px; 
+		background-color: lightgray;
+	}
+
+	.helper-text {
+		font-size: 12px;
+		font-family: sans-serif;
+		color: #555;
+		text-align: center;
+		/* margin-top: -5px; */
+		margin-bottom: 5px;
+	}
+	.reset-button {
+		font-size: 15px;
+		font-family: sans-serif;
+	}
+
+	.legend-container {
+		display: flex;
+		align-items: center;
+		gap: 30px;
+		margin-top: 30px;
+		margin-left: 100px;
+		margin-bottom: 20px;
+	}
+
+	.city-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.legend-header {
+		text-align: center;
+		margin-bottom: 10px;
+	}
+
+	.legend-header h3 {
+		margin: 0;
+		font-size: 18px;
+		font-family: sans-serif;
+	}
+
+	.legend-header p {
+		margin: 4px 0 0;
+		font-size: 12px;
+		font-style: italic;
+		color: #555;
+		font-family: sans-serif;
+	}
+
+	.aqi-summary {
+		display: flex;
+		gap: 20px;
+	}
+
+	.controls {
+		display: flex;
+		align-items: center;
+		gap: 15px;
+	}
+
+	.city-summary {
+		padding-left: 10px;
+		padding-right: 10px;
+		padding-top: 5px;
+		padding-bottom: 5px;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-family: sans-serif;
+		cursor: pointer;
+	}
+
+	.dot {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 </style>
