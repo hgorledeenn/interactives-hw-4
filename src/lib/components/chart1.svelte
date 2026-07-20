@@ -225,6 +225,16 @@
 		{ rating: 'Hazardous', min: 300, max: 500, color: '#7e0122' }
 	];
 
+	// to make the opacity of my subhead text background match the opacity of the chart background
+	// this code came from chatGPT to help me solve the problem as I was having trouble on my own
+	function hexToRgba(hex, alpha) {
+		const r = parseInt(hex.slice(1, 3), 16);
+		const g = parseInt(hex.slice(3, 5), 16);
+		const b = parseInt(hex.slice(5, 7), 16);
+
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+	}
+
 	// for tooltips
 	let mouseX = $state(null);
 	let mouseY = $state(null);
@@ -255,11 +265,24 @@
 
 <div bind:clientWidth={containerWidth}>
 	<div
-		 class="story-head"
-		 style="width: {width - margin.left - margin.right}px; margin-left: {margin.left}px;"
+		class="story-head"
+		style="width: {width - margin.left - margin.right}px; margin-left: {margin.left}px;"
 	>
 		<h1>Smoke from Canadian Wildfires Fills US Skies</h1>
-		<p>The Air Quality Index in 5 US Cities ranged drastically on July 17, as smoke from hundreds of active wildfires in Canada was funneled over the Midwest and Northeast. Both Chicago and Detroit had sustained AQI values above 300, considered "Hazardous", while Pittsburgh and Washington D.C. peaked in the next-highest range, considered "Very Unhealthy".</p>
+		<p>
+			The Air Quality Index in 5 US Cities ranged drastically on July 17, as smoke from hundreds of
+			active wildfires in Canada was funneled over the Midwest and Northeast. Both Chicago and
+			Detroit had sustained AQI values above 300, considered <span
+				style="background-color: {hexToRgba('#7e0122', opacity)}; color: {opacity < 0.7
+					? '#000'
+					: '#fff'};">"Hazardous"</span
+			>, while Pittsburgh and Washington D.C. peaked in the next-highest range, considered
+			<span
+				style="background-color: {hexToRgba('#8f3f97', opacity)}; color: {opacity < 0.7
+					? '#000'
+					: '#fff'}; fill-opacity: {opacity};">"Very Unhealthy"</span
+			>.
+		</p>
 	</div>
 	<div class="legend-container">
 		<div class="city-section">
@@ -437,7 +460,6 @@
 </div>
 
 <style>
-
 	.story-head {
 		margin-top: 40px;
 		margin-bottom: 20px;
@@ -457,8 +479,8 @@
 	}
 
 	.highlight-box {
-		border: 2px solid #333333; 
-		border-radius: 12px; 
+		border: 2px solid #333333;
+		border-radius: 12px;
 		background-color: lightgray;
 	}
 
@@ -478,10 +500,13 @@
 	.legend-container {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
+
 		gap: 30px;
 		margin-top: 30px;
 		margin-left: 100px;
 		margin-bottom: 20px;
+		margin-right: 30px;
 	}
 
 	.city-section {
@@ -511,6 +536,7 @@
 
 	.aqi-summary {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 20px;
 	}
 
